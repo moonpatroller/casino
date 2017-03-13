@@ -47,9 +47,9 @@ class AnotherSpec extends FlatSpec with Matchers {
     g.guessHelper(false, 11.toByte, 12.toByte) should be ("lose")
   }
 
-  "A HighLowGame" should "tie for lower with 10, 23" in {
+  "A HighLowGame" should "draw for lower with 10, 23" in {
     val g = new HighLowGame()
-    g.guessHelper(false, 10.toByte, 23.toByte) should be ("tie")
+    g.guessHelper(false, 10.toByte, 23.toByte) should be ("draw")
   }
 
 }

@@ -4,6 +4,9 @@ object BlackjackHand
 }
 
 case class BlackjackHand(cards: List[Byte]) {
+    def isBlackjack(): Boolean = cards.length == 2 && getScore() == 21
+    def isBusted(): Boolean = getScore() > 21
+
     def getScore(): Int = {
         def numericRank(b: Byte): Int = {
             val rank = b % 13
@@ -18,47 +21,76 @@ case class BlackjackHand(cards: List[Byte]) {
         }
     }
     def addCard(card: Byte): BlackjackHand = BlackjackHand(card :: cards)
+
+    def hitTil17(deck: CardSource): BlackjackHand = {
+        if (getScore() > 16) this
+        else addCard(deck.draw()).hitTil17(deck)
+    }
+
 }
 
 object Status {
-    def apply(deck: CardSource): Status = {
-        val playerCards = BlackjackHand(deck.draw(), deck.draw())
-        if (playerCards.getScore() == 21) {
-            val dealerCards = BlackjackHand(deck.draw(), deck.draw())
-            GameOver(dealerCards, playerCards)
+    def apply(deck: CardSource): Status = apply(deck, BlackjackHand(deck.draw(), deck.draw()), BlackjackHand(deck.draw(), deck.draw()))
+
+    def apply(deck: CardSource, playerHand: BlackjackHand, dealerHand: BlackjackHand): Status = {
+        if (playerHand.isBlackjack()) {
+            if (dealerHand.isBlackjack()) {
+                Push(playerHand, dealerHand)
+            } else {
+                PlayerBlackjack(playerHand, dealerHand)
+            }
+        } else if (playerHand.isBusted()) {
+            PlayerBusted(playerHand, dealerHand)
         } else {
-            PlayerTurn(deck.draw(), playerCards, deck)
+            PlayerTurn(deck, playerHand, dealerHand)
+        }
+    }
+
+    def dealerTurn(deck: CardSource, playerHand: BlackjackHand, dealerHand: BlackjackHand): Status = {
+        val finalDealerHand = dealerHand.hitTil17(deck)
+        if (finalDealerHand.isBusted()) {
+            DealerBusted(playerHand, finalDealerHand)
+        } else if (finalDealerHand.getScore() == playerHand.getScore()) {
+            Push(playerHand, finalDealerHand)
+        } else {
+            GameOver(playerHand, finalDealerHand)
         }
     }
 }
 
 sealed trait Status {
-    def hit(): Status = this
-    def stand(): Status = this
+    def getResult(): String = ""
 }
 
-case class PlayerTurn(dealerCard: Byte, playerCards: BlackjackHand, deck: CardSource) extends Status {
-    def hitTil17(cards: BlackjackHand): BlackjackHand = {
-        if (cards.getScore() > 16) cards
-        else hitTil17(cards.addCard(deck.draw()))
-    }
+case class PlayerTurn(deck: CardSource, playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
 
-    override def hit(): Status = {
-        val newPlayerCards = playerCards.addCard(deck.draw())
-        if (newPlayerCards.getScore() < 21) {
-            copy(playerCards = newPlayerCards)
-        } else if (newPlayerCards.getScore() > 21) {
-            GameOver(BlackjackHand(deck.draw(), dealerCard), newPlayerCards)
+    def hit():   Status = Status(deck, playerHand.addCard(deck.draw()), dealerHand)
+
+    def stand(): Status = Status.dealerTurn(deck, playerHand, dealerHand)
+}
+
+case class PlayerBlackjack(playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
+    override def getResult(): String = "blackjack"
+}
+
+case class PlayerBusted(playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
+    override def getResult(): String = "player busted"
+}
+
+case class DealerBusted(playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
+    override def getResult(): String = "dealer busted"
+}
+
+case class Push(playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
+    override def getResult(): String = "push"
+}
+
+case class GameOver(playerHand: BlackjackHand, dealerHand: BlackjackHand) extends Status {
+    override def getResult(): String = {
+        if (dealerHand.getScore() > playerHand.getScore()) {
+            "dealer wins"
         } else {
-            val dealerCards = hitTil17(BlackjackHand(dealerCard :: Nil))
-            GameOver(dealerCards, newPlayerCards)
+            "player wins"
         }
     }
-
-    override def stand(): Status = {
-        val dealerCards = hitTil17(BlackjackHand(dealerCard :: Nil))
-        GameOver(dealerCards, playerCards)
-    }
 }
-
-case class GameOver(dealerCards: BlackjackHand, playerCards: BlackjackHand) extends Status
