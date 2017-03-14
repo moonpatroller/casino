@@ -1,7 +1,6 @@
 import org.json4s._
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{read, write}
-import org.json4s.ParserUtil.ParseException
 
 import java.util.UUID.randomUUID
 
@@ -41,7 +40,7 @@ class HighLowMoves
                         }
                 }
             } catch {
-                case pe: ParseException => 
+                case pe: Exception => 
                     println(pe)
                     pe.printStackTrace()
                     write(Error("", "Invalid request"))

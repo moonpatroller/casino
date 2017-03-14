@@ -61,17 +61,19 @@ class BlackjackMoves
                         games.get(id) match {
                             case None => 
                                 write(Error(id, "Invalid id"))
-                            case Some(game: Status) =>
+                            case Some(game: PlayerTurn) =>
                                 move match {
                                     case "hit" => 
-                                        // games(id) = game.hit()
+                                        games(id) = game.hit()
                                         writeResult(id, games(id))
                                     case "stand" => 
-                                        // games(id) = game.stand()
+                                        games(id) = game.stand()
                                         writeResult(id, games(id))
                                     case _ => // not a valid guess
                                         write(Error(id, "Invalid move: '" + move + "'"))
                                 }
+                            case Some(game: Status) =>
+                                write(Error(id, "Can't hit or stand."))
                         }
                 }
             } catch {

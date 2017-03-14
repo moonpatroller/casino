@@ -34,7 +34,7 @@ class BlackjackSpec extends FlatSpec with Matchers {
         for (ace <- aces;
              tenCard <- tenCards) {
             val d = Deck(ace, tenCard, 1.toByte, 2.toByte)
-            Status(d) should be (GameOver(BlackjackHand(1.toByte, 2.toByte), BlackjackHand(ace, tenCard)))
+            Status(d) should be (PlayerBlackjack(BlackjackHand(ace, tenCard), BlackjackHand(1.toByte, 2.toByte)))
         }
     }
 
@@ -42,10 +42,10 @@ class BlackjackSpec extends FlatSpec with Matchers {
         for (numberCard <- numberCards;
              tenCard1 <- tenCards;
              tenCard2 <- tenCards) {
-            val d = Deck(numberCard, tenCard1, 1.toByte, tenCard2, 2.toByte)
-            Status(d).hit() should be (GameOver(BlackjackHand(2.toByte, 1.toByte), BlackjackHand(tenCard2, numberCard, tenCard1)))
+            // val d = Deck(numberCard, tenCard1, 1.toByte, tenCard2, 2.toByte)
+            // Status(d).hit() should be (GameOver(BlackjackHand(2.toByte, 1.toByte), BlackjackHand(tenCard2, numberCard, tenCard1)))
 
-            PlayerTurn(1.toByte, BlackjackHand(numberCard, tenCard1), Deck(tenCard2, 2.toByte)).hit() should be (GameOver(BlackjackHand(2.toByte, 1.toByte), BlackjackHand(tenCard2, numberCard, tenCard1)))
+            PlayerTurn(Deck(tenCard2, 2.toByte), BlackjackHand(numberCard, tenCard1), BlackjackHand(1.toByte, 2.toByte)).hit() should be (PlayerBusted(BlackjackHand(tenCard2, numberCard, tenCard1), BlackjackHand(1.toByte, 2.toByte)))
         }
     }
 
@@ -53,13 +53,33 @@ class BlackjackSpec extends FlatSpec with Matchers {
 
         val playerHand = BlackjackHand(2.toByte, 16.toByte)
 
-        for (c1 <- 1 until 13;
-             c2 <- 1 until 13;
-             dealerHand = BlackjackHand(c1.toByte, c2.toByte);
-             score = dealerHand.getScore()
-             if score < 17 && score > 6) {
+        for (c1 <- 0 until 13;
+             c2 <- 0 until 13;
+             c3 <- 0 until 13;
+             dealerHand1 = BlackjackHand(c1.toByte, c2.toByte);
+             dealerHand2 = BlackjackHand(c1.toByte, c2.toByte, c3.toByte);
+             score1 = dealerHand1.getScore();
+             score2 = dealerHand1.getScore()
+             if score1 < 17 && score2 <= 21 && score2 >= 17) {
 
-            PlayerTurn(c1.toByte, playerHand, Deck(c2.toByte, 9.toByte)).stand() should be (GameOver(BlackjackHand(9.toByte, c2.toByte, c1.toByte), playerHand))
+            PlayerTurn(Deck(c2.toByte, 9.toByte), playerHand, BlackjackHand(c1.toByte)).stand() should be (GameOver(playerHand, BlackjackHand(c3.toByte, c2.toByte, c1.toByte)))
+        }
+    }
+
+    "A BlackjackGames" should "have dealer bust" in {
+
+        val playerHand = BlackjackHand(2.toByte, 16.toByte)
+
+        for (c1 <- 0 until 13;
+             c2 <- 0 until 13;
+             c3 <- 0 until 13;
+             dealerHand1 = BlackjackHand(c1.toByte, c2.toByte);
+             dealerHand2 = BlackjackHand(c1.toByte, c2.toByte, c3.toByte);
+             score1 = dealerHand1.getScore();
+             score2 = dealerHand1.getScore()
+             if score1 < 17 && score2 > 21) {
+
+            PlayerTurn(Deck(c2.toByte, 9.toByte), playerHand, BlackjackHand(c1.toByte)).stand() should be (DealerBusted(playerHand, BlackjackHand(c3.toByte, c2.toByte, c1.toByte)))
         }
     }
 
@@ -73,7 +93,7 @@ class BlackjackSpec extends FlatSpec with Matchers {
              score = dealerHand.getScore()
              if score > 16) {
 
-            PlayerTurn(c1.toByte, playerHand, Deck(c2.toByte)).stand() should be (GameOver(BlackjackHand(c2.toByte, c1.toByte), playerHand))
+            PlayerTurn(Deck(c2.toByte), playerHand, BlackjackHand(c1.toByte)).stand() should be (GameOver(playerHand, BlackjackHand(c2.toByte, c1.toByte)))
         }
     }
 
