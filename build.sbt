@@ -12,6 +12,3 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 libraryDependencies += "org.json4s" % "json4s-native_2.12" % "3.5.0"
 
 logBuffered in Test := false
-
-// retrieveManaged := true
-

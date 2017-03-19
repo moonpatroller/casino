@@ -7,6 +7,7 @@ object Http {
     case class Response(sock: Socket) {
         val out = new PrintStream(sock.getOutputStream(), true, "UTF-8")
         def print(s: String): Unit = out.print(s)
+        def println(s: String): Unit = out.print(s + "\r\n")
         def end(): Unit = {
             out.flush()
             out.close()
@@ -43,14 +44,24 @@ object Http {
     }
 }
 
+// TODO:
+// remove old/finished games
+
 object Server
 {
+	def printHeader(response: Http.Response): Unit = {
+    	response.println("HTTP/1.1 200 OK")
+    	response.println("Access-Control-Allow-Origin: *")
+    	response.println("")
+	}
+
     def main(args: Array[String]): Unit = {
 
         val highLow = new HighLowMoves()
 
         Http.handle("/highlow/", (request, response) => {
         	println(request.body)
+        	printHeader(response)
             response.print(highLow.handleRequest(request.body))
             response.end()
         })
@@ -59,6 +70,7 @@ object Server
 
         Http.handle("/blackjack/", (request, response) => {
         	println(request.body)
+        	printHeader(response)
             response.print(blackjack.handleRequest(request.body))
             response.end()
         })

@@ -3,6 +3,7 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{read, write}
 import org.json4s.ParserUtil.ParseException
 
+import java.util.concurrent.{DelayQueue, TimeUnit}
 import java.util.UUID.randomUUID
 
 class BlackjackMoves
@@ -14,7 +15,8 @@ class BlackjackMoves
     case class Error(id: String, msg: String)
     case class BlackjackResult(id: String, 
         dealerCards: List[String], dealerScore: Int, 
-        playerCards: List[String], playerScore: Int, result: String)
+        playerCards: List[String], playerScore: Int, 
+        result: String, nextMoves: List[String])
 
     def prettyPrint(card: Byte): String = if (card < 0) "" else Card.rank(card) + Card.suit(card)
 
@@ -29,26 +31,36 @@ class BlackjackMoves
     def writeResult(id: String, status: Status): String = {
         status match {
             case PlayerTurn(_, playerCards, dealerCards) => 
-                write(BlackjackResult(id, prettyPrintFirstCard(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), ""))
+                write(BlackjackResult(id, prettyPrintFirstCard(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), "", List("hit", "stand", "display")))
 
             case go @ GameOver(playerCards, dealerCards) =>
-                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), go.getResult()))
+                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), go.getResult(), Nil))
 
             case pb @ PlayerBusted(playerCards, dealerCards) => 
-                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pb.getResult()))
+                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pb.getResult(), Nil))
 
             case db @ DealerBusted(playerCards, dealerCards) => 
-                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), db.getResult()))
+                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), db.getResult(), Nil))
 
             case pbj @ PlayerBlackjack(playerCards, dealerCards) => 
-                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pbj.getResult()))
+                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pbj.getResult(), Nil))
 
             case pu @ Push(playerCards, dealerCards) => 
-                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pu.getResult()))
+                write(BlackjackResult(id, prettyPrint(dealerCards), dealerCards.getScore(), prettyPrint(playerCards), playerCards.getScore(), pu.getResult(), Nil))
+        }
+    }
+
+    def removeOldGames(): Unit = {
+        for ((k, v) <- games) {
+            v match {
+                case _: PlayerTurn =>
+                case _ => games.remove(k)
+            }
         }
     }
 
     def handleRequest(text: String): String = {
+        removeOldGames()
         if (text == "newgame") {
             val id = randomUUID().toString()
             val game = Status(Deck())
@@ -63,6 +75,8 @@ class BlackjackMoves
                                 write(Error(id, "Invalid id"))
                             case Some(game: PlayerTurn) =>
                                 move match {
+                                    case "display" => 
+                                        writeResult(id, games(id))
                                     case "hit" => 
                                         games(id) = game.hit()
                                         writeResult(id, games(id))

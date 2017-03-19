@@ -9,6 +9,7 @@ class HighLowGame
     var currentCard: Byte = deck.draw()
 
     def drawCard(): Unit = {
+        numLeft -= 1
         lastCard = currentCard
         currentCard = deck.draw()
     }
